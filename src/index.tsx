@@ -39,7 +39,9 @@ window.addEventListener('storage', (e) => {
 
   if (useAuthStore.getState().isAuthenticated) {
     useAuthStore.getState().clearSession();
-    window.location.href = '/';
+    // replace() so the cross-tab logout redirect doesn't leave the
+    // authenticated page on the history stack (consistent with logout()).
+    window.location.replace('/');
   }
 });
 

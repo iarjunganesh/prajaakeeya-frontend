@@ -117,6 +117,7 @@ const AdminLoginPage = () => {
       {/* Theme toggle */}
       <Tooltip title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
         <IconButton
+          aria-label="Toggle theme"
           onClick={toggleTheme}
           size="small"
           sx={{

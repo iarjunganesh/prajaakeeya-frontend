@@ -29,9 +29,13 @@ const DANGEROUS_SCHEME = /^(javascript|data|vbscript|file):/i;
  */
 const normalizeForCheck = (input: string): string =>
   input
-    // strip leading control chars / whitespace (0x00-0x20) before the scheme
+    // strip leading control chars / whitespace (0x00-0x20) before the scheme.
+    // The \x00 control char is INTENTIONAL — these obfuscation bytes are exactly
+    // what we're defending against, so the no-control-regex lint rule is disabled.
+    // eslint-disable-next-line no-control-regex
     .replace(/^[\x00-\x20]+/, '')
     // remove tabs / newlines / null that browsers ignore inside the scheme token
+    // eslint-disable-next-line no-control-regex
     .replace(/[\t\r\n\x00]/g, '')
     .toLowerCase();
 

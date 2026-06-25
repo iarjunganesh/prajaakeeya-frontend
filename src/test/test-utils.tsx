@@ -16,23 +16,40 @@ import { getTheme } from '../theme';
 interface ProvidersOptions extends Omit<RenderOptions, 'wrapper'> {
   // Initial URL the in-memory router starts at (default '/').
   route?: string;
+  // Optional route state for the MemoryRouter initial entry. Lets tests exercise
+  // components that branch on `location.state` (e.g. SopPage's
+  // `fromAspirantRegistration` flag).
+  state?: Record<string, unknown>;
 }
 
 // Wraps children in the app's MUI theme + an in-memory router.
 // MemoryRouter is used (not BrowserRouter) so navigation works without a real
-// browser URL bar, and tests can start at any route.
-function AllProviders({ children, route = '/' }: { children: ReactNode; route?: string }) {
+// browser URL bar, and tests can start at any route (optionally with state).
+function AllProviders({
+  children,
+  route = '/',
+  state,
+}: {
+  children: ReactNode;
+  route?: string;
+  state?: Record<string, unknown>;
+}) {
+  const entry = state ? { pathname: route, state } : route;
   return (
     <ThemeProvider theme={getTheme('light')}>
-      <MemoryRouter initialEntries={[route]}>{children}</MemoryRouter>
+      <MemoryRouter initialEntries={[entry]}>{children}</MemoryRouter>
     </ThemeProvider>
   );
 }
 
 export function renderWithProviders(ui: ReactElement, options: ProvidersOptions = {}) {
-  const { route, ...rest } = options;
+  const { route, state, ...rest } = options;
   return render(ui, {
-    wrapper: ({ children }) => <AllProviders route={route}>{children}</AllProviders>,
+    wrapper: ({ children }) => (
+      <AllProviders route={route} state={state}>
+        {children}
+      </AllProviders>
+    ),
     ...rest,
   });
 }

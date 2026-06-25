@@ -162,10 +162,21 @@ const App = () => {
     // no client-side token — the httpOnly session cookie is the only signal —
     // so we always ask /auth/me, which returns the user if the cookie is valid
     // or 401s (→ interceptor handles refresh/logout) if not.
-    if (COOKIE_AUTH || token) {
+    //
+    // EXCEPTION: skip the probe on the OAuth-transition pages (/auth/callback and
+    // the /register celebration screen). There the session is still being
+    // established — AuthCallbackPage runs the code→cookie exchange itself, then
+    // navigates onward. Probing /auth/me here just races the exchange and returns
+    // a (harmless but noisy) 401 before the cookie is committed. Once the user
+    // lands on a real page, this effect re-runs and the probe succeeds with the
+    // cookie now in place.
+    const inAuthTransition =
+      location.pathname.startsWith('/auth/callback') ||
+      location.pathname.startsWith('/register');
+    if ((COOKIE_AUTH || token) && !inAuthTransition) {
       void fetchProfile();
     }
-  }, [token, fetchProfile]);
+  }, [token, fetchProfile, location.pathname]);
 
   useEffect(() => {
     // Constituency onboarding guard. The decision must be data-driven (are all

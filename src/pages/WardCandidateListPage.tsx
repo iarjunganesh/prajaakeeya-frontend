@@ -28,7 +28,6 @@ import {
 } from '@mui/material';
 import {
   LocationOn as LocationOnIcon,
-  Send as SendIcon,
   Forum as ForumIcon,
   Videocam as VideocamIcon,
   WhatsApp as WhatsAppIcon,
@@ -73,7 +72,6 @@ import {
   type ConstituencyStats,
 } from '../services/electionService';
 import { fetchVotingWindow, submitVote, fetchMyVote } from '../services/voteService';
-import { getAspirantMessages, postUserChatMessage, AspirantChatMessageDto } from '../services/aspirantChatService';
 import useAuthStore from '../store/useAuthStore';
 import apiClient from '../services/apiClient';
 import CloseIcon from '@mui/icons-material/Close';
@@ -242,11 +240,6 @@ const WardCandidateListPage = ({ embedded = false }: WardCandidateListPageProps 
   const [votePercentages, setVotePercentages] = useState<Record<number, number>>({});
   const [loading, setLoading] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
-  const [activeAspirant, setActiveAspirant] = useState<Candidate | null>(null);
-  const [chatMessages, setChatMessages] = useState<any[]>([]);
-  const [chatLoading, setChatLoading] = useState(false);
-  const [chatText, setChatText] = useState('');
   const [aspirantPopupOpen, setAspirantPopupOpen] = useState(false);
   const [aspirantMeetings, setAspirantMeetings] = useState<Record<number, any[]>>({});
   const [aspirantVisits, setAspirantVisits] = useState<Record<number, any[]>>({});
@@ -444,10 +437,8 @@ const WardCandidateListPage = ({ embedded = false }: WardCandidateListPageProps 
   };
   const [searchParams, setSearchParams] = useSearchParams();
   const isKannada = i18n.language.startsWith('kn');
-  const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const [posting, setPosting] = useState(false);
   const [hasVoted, setHasVoted] = useState(false);
-  const [successOpen, setSuccessOpen] = useState(false);
   const [errorOpen, setErrorOpen] = useState(false);
   const [errorMsg, setErrorMsg] = useState('');
   const [voteThankOpen, setVoteThankOpen] = useState(false);
@@ -781,10 +772,6 @@ const WardCandidateListPage = ({ embedded = false }: WardCandidateListPageProps 
     setAspirantStatus(typeof s === 'string' ? s : Array.isArray(s) ? s[0] : null);
   }, [user?.aspirantId, candidates]);
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth', block: 'end' });
-  }, [chatMessages]);
-
   // Show aspirant registration popup only after registration (not login)
   useEffect(() => {
     const fromRegistration = searchParams.get('fromRegistration') === 'true';
@@ -795,27 +782,6 @@ const WardCandidateListPage = ({ embedded = false }: WardCandidateListPageProps 
       setSearchParams(searchParams, { replace: true });
     }
   }, [searchParams, user, aspirantStatus]);
-
-  // Poll chat messages for the open dialog so participants see new messages
-  useEffect(() => {
-    if (!chatOpen || !activeAspirant) return;
-    let mounted = true;
-    const fetchLoop = async () => {
-      try {
-        const resp = await getAspirantMessages(activeAspirant.id, 1, 50);
-        const data = (resp.data?.data ?? resp.data) as AspirantChatMessageDto[];
-        data.sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime());
-        if (!mounted) return;
-        setChatMessages(data || []);
-      } catch (e) {
-        // ignore polling errors
-      }
-    };
-    // initial load
-    void fetchLoop();
-    const id = setInterval(fetchLoop, 5000);
-    return () => { mounted = false; clearInterval(id); };
-  }, [chatOpen, activeAspirant]);
 
   // When arriving from a notification deep-link (e.g. ?electionId=2&aspirantId=5),
   // translate electionId → type once elections have loaded so the existing tab logic
@@ -1442,12 +1408,26 @@ const WardCandidateListPage = ({ embedded = false }: WardCandidateListPageProps 
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
-  // Tick every second for countdown timer
+  // Re-evaluate meeting time-status periodically. getMeetingTimeStatus only
+  // returns upcoming/live/past (no seconds are ever displayed), so a 1Hz tick
+  // was wasteful — it caused ~60 re-renders/min for a label that only changes
+  // at the meeting start/end boundary. A 30s tick flips the status within 30s
+  // of the boundary, which is imperceptible for "is this meeting live" labels,
+  // and we skip ticking entirely while the tab is hidden (H-PERF-1). A focus
+  // listener refreshes `now` immediately on return so the status is never stale
+  // when the user is actually looking.
   useEffect(() => {
     const hasMeetings = Object.values(aspirantMeetings).some(m => m.length > 0);
     if (!hasMeetings) return;
-    const id = setInterval(() => setNow(Date.now()), 1000);
-    return () => clearInterval(id);
+    const tick = () => { if (document.visibilityState === 'visible') setNow(Date.now()); };
+    tick(); // refresh immediately on (re)mount / dependency change
+    const id = setInterval(tick, 30_000);
+    const onVisible = () => { if (document.visibilityState === 'visible') setNow(Date.now()); };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      clearInterval(id);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
   }, [aspirantMeetings]);
 
   return (
@@ -3392,8 +3372,11 @@ const WardCandidateListPage = ({ embedded = false }: WardCandidateListPageProps 
                         const finalDisabled = isDemo || voteDisabled || hasVoted || Boolean(user?.hasVoted);
                         return (
                           <Box sx={{ width: '100%' }}>
-                            {/* Signed SOP button */}
-                            {(isDemoCandidate(candidate) || candidate.sopUrl || candidate.sopKannadaUrl) && (
+                            {/* Signed SOP button — temporarily hidden for ALL aspirants so the
+                                card layout is uniform (it previously showed only for aspirants
+                                who had a signed SOP on file, which looked inconsistent). To
+                                re-enable, remove the `false &&` below. */}
+                            {false && (isDemoCandidate(candidate) || candidate.sopUrl || candidate.sopKannadaUrl) && (
                               <Box sx={{ mb: 1 }}>
                                 <Button
                                   variant="outlined"
@@ -3554,7 +3537,7 @@ const WardCandidateListPage = ({ embedded = false }: WardCandidateListPageProps 
                 {t('pages.wardCandidates.votingWindowTitle') || 'Voting Eligibility'}
               </Typography>
             </Box>
-            <IconButton size="small" onClick={() => setEligibilityDialogOpen(false)}>
+            <IconButton aria-label="Close" size="small" onClick={() => setEligibilityDialogOpen(false)}>
               <CloseIcon sx={{ fontSize: 18, color: textSecondary }} />
             </IconButton>
           </DialogTitle>
@@ -3709,152 +3692,15 @@ const WardCandidateListPage = ({ embedded = false }: WardCandidateListPageProps 
           </DialogActions>
         </Dialog>
 
-        <Dialog open={chatOpen} onClose={() => setChatOpen(false)} fullWidth maxWidth="md">
-          <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            {activeAspirant?.name || 'Interview'}
-            <IconButton onClick={() => setChatOpen(false)} size="small">
-              <CloseIcon />
-            </IconButton>
-          </DialogTitle>
-          <DialogContent dividers>
-            <Stack spacing={2}>
-              <Stack direction="row" spacing={2} alignItems="center">
-                <Box
-                  sx={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 1,
-                    bgcolor: 'primary.light',
-                    color: 'primary.main',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                >
-                  <ForumIcon />
-                </Box>
-                <Box sx={{ flex: 1 }}>
-                  <Typography variant="h6" sx={{ fontWeight: 600 }}>{activeAspirant?.name}</Typography>
-                  <Typography variant="body2" color="text.secondary">Interview room</Typography>
-                </Box>
-              </Stack>
-
-              <Divider sx={{ my: 1 }} />
-
-              <Stack spacing={2} sx={{ maxHeight: 520, overflowY: 'auto', pr: 1 }}>
-                {chatLoading && <Typography variant="body2">Loading messages...</Typography>}
-                {chatMessages.map((m) => {
-                  const isMe = m.userId === user?.id;
-                  return (
-                    <Stack
-                      key={m.id}
-                      direction="row"
-                      spacing={2}
-                      alignItems="flex-start"
-                      justifyContent={isMe ? 'flex-end' : 'flex-start'}
-                    >
-                      {!isMe && (
-                        <Avatar sx={{ width: 44, height: 44, bgcolor: 'primary.main' }}>{(m.user?.name || 'U').charAt(0)}</Avatar>
-                      )}
-                      <Box
-                        sx={{
-                          bgcolor: isMe ? 'primary.main' : 'grey.100',
-                          color: isMe ? '#fff' : 'text.primary',
-                          px: 2.5,
-                          py: 1.75,
-                          borderRadius: 2,
-                          maxWidth: '75%'
-                        }}
-                      >
-                        {!isMe && (
-                          <Stack direction="row" spacing={1} alignItems="center">
-                            <Typography variant="caption" sx={{ display: 'block', fontWeight: 600, mb: 0.5 }}>
-                              {m.user?.name}
-                            </Typography>
-                            {m.user?.role === 'aspirant' && (
-                              <Chip size="small" label="Aspirant" sx={{ bgcolor: '#FFF7ED', color: '#F97316', fontWeight: 600, fontSize: '0.6rem', height: 20, borderRadius: 6 }} />
-                            )}
-                          </Stack>
-                        )}
-                        <Typography variant="body2">{m.content}</Typography>
-                        <Typography variant="caption" sx={{ display: 'block', mt: 0.5, opacity: 0.8 }}>
-                          {new Date(m.createdAt).toLocaleString()}
-                        </Typography>
-                      </Box>
-                    </Stack>
-                  );
-                })}
-                <div ref={messagesEndRef} />
-              </Stack>
-            </Stack>
-          </DialogContent>
-          <Divider />
-          <DialogActions sx={{ px: 2, py: 2 }}>
-            <TextField
-              fullWidth
-              placeholder={t('pages.wardCandidates.chatPlaceholder') || 'Write a question...'}
-              value={chatText}
-              onChange={(e) => setChatText(e.target.value)}
-              inputProps={{
-                autoCorrect: 'off',
-                autoCapitalize: 'off',
-                spellCheck: false,
-                autoComplete: 'off'
-              }}
-              onKeyDown={async (e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  if (!chatText.trim() || !activeAspirant) return;
-                  setPosting(true);
-                  try {
-                    const resp = await postUserChatMessage(activeAspirant.id, { content: chatText.trim() });
-                    const m = resp.data as AspirantChatMessageDto;
-                    setChatMessages((prev) => [...prev, m]);
-                    setChatText('');
-                    setSuccessOpen(true);
-                    try { void trackInteraction(activeAspirant.id); } catch (_) { /* noop */ }
-                  } catch (err: any) {
-                    setErrorMsg(err?.response?.data?.message || 'Failed to send message');
-                    setErrorOpen(true);
-                  } finally {
-                    setPosting(false);
-                  }
-                }
-              }}
-            />
-            <Button
-              variant="contained"
-              endIcon={<SendIcon />}
-              onClick={async () => {
-                if (!chatText.trim() || !activeAspirant) return;
-                setPosting(true);
-                try {
-                  const resp = await postUserChatMessage(activeAspirant.id, { content: chatText.trim() });
-                  const m = resp.data as AspirantChatMessageDto;
-                  setChatMessages((prev) => [...prev, m]);
-                  setChatText('');
-                  setSuccessOpen(true);
-                  try { void trackInteraction(activeAspirant.id); } catch (_) { /* noop */ }
-                } catch (err: any) {
-                  setErrorMsg(err?.response?.data?.message || 'Failed to send message');
-                  setErrorOpen(true);
-                } finally {
-                  setPosting(false);
-                }
-              }}
-              disabled={posting}
-            >
-              {t('discussion.send') || 'Send'}
-            </Button>
-          </DialogActions>
-
-          <Snackbar open={successOpen} autoHideDuration={2500} onClose={() => setSuccessOpen(false)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
-            <Alert severity="success" onClose={() => setSuccessOpen(false)}>Message posted</Alert>
-          </Snackbar>
-          <Snackbar open={errorOpen} autoHideDuration={3500} onClose={() => setErrorOpen(false)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
-            <Alert severity="error" onClose={() => setErrorOpen(false)}>{errorMsg}</Alert>
-          </Snackbar>
-        </Dialog>
+        {/* Live chat moved to the dedicated UserChatPage (/user/chat/:aspirantId),
+            which uses SSE streaming. The former inline chat <Dialog> here was
+            unreachable dead code (chatOpen was never set true) and has been
+            removed along with its polling effect and chat-only state. The error
+            snackbar stays: errorOpen is still set by other handlers on this page
+            (rating, registration, etc.) and needs a render target. */}
+        <Snackbar open={errorOpen} autoHideDuration={3500} onClose={() => setErrorOpen(false)} anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}>
+          <Alert severity="error" onClose={() => setErrorOpen(false)}>{errorMsg}</Alert>
+        </Snackbar>
 
         {/* Post-Registration Role Choice Popup */}
         <Dialog

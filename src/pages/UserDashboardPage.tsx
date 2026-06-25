@@ -635,7 +635,7 @@ const UserDashboardPage = () => {
           >
             {t('userDashboard.actions.continueAspirantRegistration')}
           </Button>
-          <IconButton size="small" color="inherit" onClick={() => setPendingAlertDismissed(true)}>
+          <IconButton aria-label="Dismiss" size="small" color="inherit" onClick={() => setPendingAlertDismissed(true)}>
             <CloseIcon fontSize="small" />
           </IconButton>
         </Stack>
@@ -657,7 +657,7 @@ const UserDashboardPage = () => {
             >
               {t('userDashboard.actions.continueAspirantRegistration')}
             </Button>
-            <IconButton size="small" color="inherit" onClick={() => setPendingAlertDismissed(true)}>
+            <IconButton aria-label="Dismiss" size="small" color="inherit" onClick={() => setPendingAlertDismissed(true)}>
               <CloseIcon fontSize="small" />
             </IconButton>
           </Stack>

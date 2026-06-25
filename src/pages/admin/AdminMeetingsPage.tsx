@@ -247,6 +247,7 @@ const AdminMeetingsPage: React.FC = () => {
                                                     <TableCell align="right">
                                                         <Tooltip title="Join Meeting">
                                                             <IconButton
+                                                                aria-label="Open meeting link"
                                                                 size="small"
                                                                 onClick={() => openMeetingLink(meeting.meetingLink)}
                                                                 color="primary"
@@ -256,6 +257,7 @@ const AdminMeetingsPage: React.FC = () => {
                                                         </Tooltip>
                                                         <Tooltip title="Delete Meeting">
                                                             <IconButton
+                                                                aria-label="Delete meeting"
                                                                 size="small"
                                                                 onClick={() => handleDeleteClick(meeting)}
                                                                 color="error"

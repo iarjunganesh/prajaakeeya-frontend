@@ -344,7 +344,7 @@ const ConstituencyPickerDialog: React.FC<Props> = ({ open, onClose, onSaved }) =
         pb: 1,
       }}>
         {t('pages.constituencyOnboarding.dialogTitle', { defaultValue: 'Update your constituencies' })}
-        <IconButton onClick={onClose} disabled={submitting} size="small" sx={{ color: 'inherit' }}>
+        <IconButton aria-label="Close" onClick={onClose} disabled={submitting} size="small" sx={{ color: 'inherit' }}>
           <CloseIcon fontSize="small" />
         </IconButton>
       </DialogTitle>

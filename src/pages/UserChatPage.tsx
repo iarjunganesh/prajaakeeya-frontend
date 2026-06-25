@@ -121,7 +121,7 @@ const UserChatPage: React.FC = () => {
                         <Typography variant="body2" color="text.secondary">{t('discussion.roomLabel') || 'Interview room'}</Typography>
                     </Box>
                 </Box>
-                <IconButton onClick={() => navigate(-1)}><CloseIcon /></IconButton>
+                <IconButton aria-label="Go back" onClick={() => navigate(-1)}><CloseIcon /></IconButton>
             </Box>
 
             <Card sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>

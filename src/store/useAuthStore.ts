@@ -136,8 +136,10 @@ const useAuthStore = create<AuthState>()(
         });
         localStorage.clear();
         Object.entries(preserved).forEach(([key, val]) => localStorage.setItem(key, val));
-        // Hard refresh to ensure latest build is loaded (clears SW cache)
-        window.location.href = '/';
+        // Hard refresh to ensure latest build is loaded (clears SW cache).
+        // replace() (not href=) so logout doesn't leave the post-logout page on
+        // the history stack — prevents back-button loops back into a stale session.
+        window.location.replace('/');
       },
       fetchProfile: async () => {
         const state = get();

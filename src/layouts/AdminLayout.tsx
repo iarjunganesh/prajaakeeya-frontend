@@ -248,6 +248,7 @@ const AdminLayout = () => {
             </Box>
             <Tooltip title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
               <IconButton
+                aria-label="Toggle theme"
                 onClick={toggleTheme}
                 size="small"
                 sx={{ color: 'text.secondary' }}
@@ -256,6 +257,7 @@ const AdminLayout = () => {
               </IconButton>
             </Tooltip>
             <IconButton
+              aria-label="Log out"
               onClick={handleLogout}
               size="small"
               sx={{

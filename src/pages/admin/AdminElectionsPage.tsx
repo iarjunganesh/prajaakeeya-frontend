@@ -194,6 +194,7 @@ const AdminElectionsPage: React.FC = () => {
                           <TableCell align="right">
                             <Tooltip title={t('adminElections.edit')}>
                               <IconButton
+                                aria-label="Edit"
                                 size="small"
                                 onClick={() => handleOpenEdit(election)}
                                 color="secondary"
@@ -203,6 +204,7 @@ const AdminElectionsPage: React.FC = () => {
                             </Tooltip>
                             <Tooltip title={t('adminElections.delete')}>
                               <IconButton
+                                aria-label="Delete"
                                 size="small"
                                 onClick={() => handleDeleteClick(election)}
                                 color="error"
