@@ -23,6 +23,7 @@ import {
 import { Delete as DeleteIcon } from '@mui/icons-material';
 import apiClient from '../../services/apiClient';
 import { useTranslation } from 'react-i18next';
+import { safeUrl } from '../../utils/safeUrl';
 
 interface AspirantPostsTabProps {
     posts: any[];
@@ -140,7 +141,7 @@ const AspirantPostsTab: React.FC<AspirantPostsTabProps> = ({
                                                                 <Typography
                                                                     component="a"
                                                                     variant="caption"
-                                                                    onClick={() => window.open(p.googleMapsLink, '_blank', 'noopener')}
+                                                                    onClick={() => { const u = safeUrl(p.googleMapsLink); if (u) window.open(u, '_blank', 'noopener'); }}
                                                                     sx={{ cursor: 'pointer', color: 'primary.main', textDecoration: 'underline' }}
                                                                 >
                                                                     View on Google Maps

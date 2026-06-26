@@ -81,7 +81,9 @@ const AnimatedCrown = () => (
 /* ═══════════════ STATIC CSS (animations & shapes only) ═══════════════ */
 
 const CSS = `
-  @import url('https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@400;500;600;700&display=swap');
+  /* C-PERF-2: Bebas Neue + DM Sans are now loaded via the consolidated <link>
+     in index.html. Importing them here injected the request only after React
+     mounted and the <style> block rendered — the slowest possible path. */
 
   .anim-down{opacity:0;transform:translateY(-22px);transition:opacity .55s ease,transform .6s cubic-bezier(.34,1.56,.64,1)}
   .anim-down.on{opacity:1;transform:translateY(0)}

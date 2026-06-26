@@ -189,12 +189,12 @@ const AdminMunicipalityPage: React.FC = () => {
                           <TableCell>{it.state}</TableCell>
                           <TableCell align="right">
                             <Tooltip title="Edit">
-                              <IconButton size="small" onClick={() => openEdit(it)}>
+                              <IconButton aria-label="Edit" size="small" onClick={() => openEdit(it)}>
                                 <EditIcon />
                               </IconButton>
                             </Tooltip>
                             <Tooltip title="Delete">
-                              <IconButton size="small" color="error" onClick={() => setDeleteConfirm({ open: true, item: it })}>
+                              <IconButton aria-label="Delete" size="small" color="error" onClick={() => setDeleteConfirm({ open: true, item: it })}>
                                 <DeleteIcon />
                               </IconButton>
                             </Tooltip>

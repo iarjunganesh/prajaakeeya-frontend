@@ -25,27 +25,24 @@ import {
 } from '@mui/icons-material';
 import prajakeeyaLogo from '../assets/images/prajakeeya.webp';
 import chatImg from '../assets/images/chat.webp';
-import alertImg from '../assets/images/alert.webp';
-import employeesImg from '../assets/images/employees.webp';
 import videoCameraImg from '../assets/images/video.webp';
-import userImg from '../assets/images/user.webp';
-import king1Img from '../assets/images/king1.png';
-import sopImg from '../assets/images/sop.webp';
 import meetImg from '../assets/images/meet.webp';
-import leaderImg from '../assets/images/leader.webp';
-import managerImg from '../assets/images/manager.webp';
-import advisorImg from '../assets/images/office.webp';
-import staffImg from '../assets/images/staff.webp';
 import React from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import useAuthStore from '../store/useAuthStore';
+import { COOKIE_AUTH } from '../config/authMode';
 import { BRAND } from '../theme';
 import apiClient from '../services/apiClient';
 import { fetchAllWards } from '../services/wardService';
 import { getVoters } from '../services/voterService';
-import WardCandidateListPage from './WardCandidateListPage';
+// C-PERF-4: Lazy-load the candidate list instead of a static import. The
+// dashboard renders it inline (<WardCandidateListPage embedded /> below), so we
+// can't drop it — but a static import merges its ~98 KB chunk into the
+// dashboard chunk, defeating code-splitting. Lazy() keeps the same UX while
+// splitting it into its own chunk that streams in behind the dashboard shell.
+const WardCandidateListPage = React.lazy(() => import('./WardCandidateListPage'));
 
 const UserDashboardPage = () => {
   const { user, token } = useAuthStore();
@@ -65,9 +62,6 @@ const UserDashboardPage = () => {
 
   const { t, i18n } = useTranslation();
   const isKannada = (i18n.language || '').startsWith('kn');
-  /* actionTitleFontSize — unused (desktop card grid commented out below)
-  const actionTitleFontSize = isKannada ? { xs: '0.9rem', md: '1rem' } : { xs: '1rem', md: '1.125rem' };
-  */
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -134,207 +128,6 @@ const UserDashboardPage = () => {
     psName: ''
   };
 
-  /* ── Desktop card-grid actions & handlers — COMMENTED OUT (unused now that the
-     dashboard renders WardCandidateListPage above). Kept for easy revert. ──
-  const actions = [
-    // Registered Citizens tile — temporarily disabled
-    // {
-    //   title: t('userDashboard.actions.voters') || 'View Voters',
-    //   description: t('userDashboard.actions.votersDesc') || 'See all registered voters',
-    //   icon: <img src={king1Img} alt="voters" width={30} height={30} />,
-    //   path: `/user/voters`,
-    //   variant: 'outlined' as const,
-    //   color: 'secondary' as const
-    // },
-    {
-      title: t('userDashboard.actions.registeredAspirants') || 'Registered Aspirants',
-      description: t('userDashboard.actions.registeredAspirantsDesc') || 'See all registered aspirants',
-      icon: <img src={employeesImg} alt="aspirants" width={30} height={30} />,
-      path: `/user/registered-aspirants`,
-      variant: 'outlined' as const,
-      color: 'secondary' as const
-    },
-    {
-      title: t('userDashboard.actions.civicIssues') || 'Public Issues',
-      description: t('userDashboard.actions.civicIssuesDesc') || 'Report and track issues in your ward',
-      icon: <img src={alertImg} alt="civic issues" width={30} height={30} />,
-      path: '/user/civic-issues',
-      variant: 'outlined' as const,
-      color: 'secondary' as const
-    },
-    // Lok Sabha and State Assembly tiles are always shown. If the user hasn't
-    // saved a constituency for the type yet, clicking lands them on the
-    // /user/aspirantslist "Update Profile" empty state.
-    {
-      title: t('userDashboard.actions.myLokSabhaAspirants') || 'My Lok Sabha Aspirants',
-      description: t('userDashboard.actions.myLokSabhaAspirantsDesc') || 'Aspirants in your Lok Sabha constituency',
-      icon: <img src={leaderImg} alt="lok sabha aspirants" width={30} height={30} />,
-      path: `/user/aspirantslist?type=lok_sabha`,
-      variant: 'outlined' as const,
-      color: 'secondary' as const
-    },
-    {
-      title: t('userDashboard.actions.myStateAssemblyAspirants') || 'My State Assembly Aspirants',
-      description: t('userDashboard.actions.myStateAssemblyAspirantsDesc') || 'Aspirants in your Assembly constituency',
-      icon: <img src={advisorImg} alt="state assembly aspirants" width={30} height={30} />,
-      path: `/user/aspirantslist?type=state_assembly`,
-      variant: 'outlined' as const,
-      color: 'secondary' as const
-    },
-    // Municipal Corporation and Gram Panchayat tiles only render when the
-    // user has actually saved a constituency for that type. Since each user
-    // belongs to exactly one of these two (urban vs rural), hiding the
-    // irrelevant one keeps the dashboard clean.
-    ...((user as any)?.municipalCorporationConstituency?.id != null ? [{
-      title: t('userDashboard.actions.myMunicipalCorporationAspirants') || 'My Municipal Corporation Aspirants',
-      description: t('userDashboard.actions.myMunicipalCorporationAspirantsDesc') || 'Aspirants in your corporation ward',
-      icon: <img src={staffImg} alt="municipal corporation aspirants" width={30} height={30} />,
-      path: `/user/aspirantslist?type=municipal_corporation`,
-      variant: 'outlined' as const,
-      color: 'secondary' as const
-    }] : []),
-    ...((user as any)?.gramPanchayatConstituency != null ? [{
-      title: t('userDashboard.actions.myGramPanchayatAspirants') || 'My Gram Panchayat Aspirants',
-      description: t('userDashboard.actions.myGramPanchayatAspirantsDesc') || 'Aspirants in your Gram Panchayat',
-      icon: <img src={meetImg} alt="gram panchayat aspirants" width={30} height={30} />,
-      path: `/user/aspirantslist?type=gram_panchayat`,
-      variant: 'outlined' as const,
-      color: 'secondary' as const
-    }] : []),
-    {
-      title: t('userDashboard.actions.registerAspirant') || 'Register as Aspirant',
-      description: t('userDashboard.actions.registerAspirantDesc') || 'Apply to become an aspirant in your ward',
-      icon: <img src={managerImg} alt="register aspirant" width={30} height={30} />,
-      path: '/user/aspirants/register',
-      variant: 'contained' as const,
-      color: 'primary' as const,
-    },
-    {
-      title: t('userDashboard.actions.howUPPWorks') || 'How Prajakeeya Works',
-      description: t('userDashboard.actions.howWorksTitle') || 'Learn the Prajakeeya SOP and how the system works.',
-      icon: <img src={sopImg} alt="sop" width={30} height={30} />,
-      path: '/user/sop',
-      variant: 'outlined' as const,
-      color: 'primary' as const
-    }
-  ];
-
-  const aspirantActions = [
-    {
-      title: t('userDashboard.actions.myProfile') || 'My Profile',
-      icon: <img src={userImg} alt="my profile" width={30} height={30} />,
-      path: '/user/dashboard/profile',
-      variant: 'outlined' as const,
-      color: 'secondary' as const,
-    },
-    {
-      title: t('userDashboard.actions.civicIssues') || 'Public Issues',
-      icon: <img src={alertImg} alt="civic issues" width={30} height={30} />,
-      path: '/user/civic-issues',
-      variant: 'outlined' as const,
-      color: 'secondary' as const,
-    },
-    {
-      title: t('userDashboard.actions.howUPPWorks') || 'How Prajakeeya Works',
-      icon: <img src={sopImg} alt="sop" width={30} height={30} />,
-      path: '/user/sop',
-      variant: 'outlined' as const,
-      color: 'primary' as const,
-    },
-    {
-      title: t('userDashboard.actions.meetCitizens') || 'Meet Citizens',
-      icon: <img src={meetImg} alt="meet citizens" width={30} height={30} />,
-      path: '/user/dashboard/posts',
-      variant: 'outlined' as const,
-      color: 'secondary' as const,
-    },
-    {
-      title: t('userDashboard.actions.videoMeetings') || 'Video Meetings',
-      icon: <img src={videoCameraImg} alt="video meetings" width={120} height={120} />,
-      path: '/user/dashboard/meetings',
-      variant: 'outlined' as const,
-      color: 'secondary' as const,
-    },
-    {
-      title: t('userDashboard.actions.chatWithCitizens') || 'Chat with Citizens',
-      icon: <img src={chatImg} alt="chat with citizens" width={30} height={30} />,
-      path: `/user/chat/${user?.aspirantId || ''}`,
-      variant: 'outlined' as const,
-      color: 'secondary' as const,
-    },
-    // Lok Sabha and State Assembly tiles are always shown. The aspirants list
-    // page nudges them to /user/complete-profile if the constituency isn't set.
-    {
-      title: t('userDashboard.actions.myLokSabhaAspirants') || 'My Lok Sabha Aspirants',
-      icon: <img src={leaderImg} alt="lok sabha aspirants" width={30} height={30} />,
-      path: `/user/aspirantslist?type=lok_sabha`,
-      variant: 'outlined' as const,
-      color: 'secondary' as const,
-    },
-    {
-      title: t('userDashboard.actions.myStateAssemblyAspirants') || 'My State Assembly Aspirants',
-      icon: <img src={advisorImg} alt="state assembly aspirants" width={30} height={30} />,
-      path: `/user/aspirantslist?type=state_assembly`,
-      variant: 'outlined' as const,
-      color: 'secondary' as const,
-    },
-    // Municipal Corporation / Gram Panchayat only render when the aspirant has
-    // saved one — a person belongs to exactly one local body, never both.
-    ...((user as any)?.municipalCorporationConstituency?.id != null ? [{
-      title: t('userDashboard.actions.myMunicipalCorporationAspirants') || 'My Municipal Corporation Aspirants',
-      icon: <img src={staffImg} alt="municipal corporation aspirants" width={30} height={30} />,
-      path: `/user/aspirantslist?type=municipal_corporation`,
-      variant: 'outlined' as const,
-      color: 'secondary' as const,
-    }] : []),
-    ...((user as any)?.gramPanchayatConstituency != null ? [{
-      title: t('userDashboard.actions.myGramPanchayatAspirants') || 'My Gram Panchayat Aspirants',
-      icon: <img src={meetImg} alt="gram panchayat aspirants" width={30} height={30} />,
-      path: `/user/aspirantslist?type=gram_panchayat`,
-      variant: 'outlined' as const,
-      color: 'secondary' as const,
-    }] : []),
-    // Registered Citizens tile — temporarily disabled
-    // {
-    //   title: t('userDashboard.actions.voters') || 'View Voters',
-    //   icon: <img src={king1Img} alt="voters" width={30} height={30} />,
-    //   path: `/user/voters`,
-    //   variant: 'outlined' as const,
-    //   color: 'secondary' as const,
-    // },
-    {
-      title: t('userDashboard.actions.registeredAspirants') || 'Registered Aspirants',
-      icon: <img src={employeesImg} alt="registered aspirants" width={30} height={30} />,
-      path: `/user/registered-aspirants`,
-      variant: 'outlined' as const,
-      color: 'secondary' as const,
-    },
-  ];
-
-  const displayActions = isAspirant ? aspirantActions : actions;
-
-  const handleActionClick = async (action: any) => {
-    const disabledForThis = (isAspirantRegistrationComplete && action.path === '/user/aspirants/register') || (action as any).disabled;
-    if (disabledForThis) return;
-
-    // The aspirant flow now starts on the standalone Declaration page.
-    const target = action.path === '/user/aspirants/register'
-      ? '/user/aspirants/declaration'
-      : action.path;
-    try {
-      if (action.path === '/user/aspirants/register' && shouldShowContinue) {
-        navigate(target, { state: { resume: true } });
-        return;
-      }
-
-      navigate(target);
-    } catch (err) {
-      console.warn('[handleActionClick] error', err);
-      navigate(target);
-    }
-  };
-  */
-
   const DRAFT_KEY = `aspirant_registration_draft_${user?.id ?? 'guest'}`;
   const [hasLocalDraft, setHasLocalDraft] = React.useState(false);
   React.useEffect(() => {
@@ -349,10 +142,6 @@ const UserDashboardPage = () => {
   const hasIncompleteAspirant = Boolean(user?.role === 'aspirant' && (user as any)?.documentStatus !== 'completed');
   const shouldShowContinue = hasLocalDraft || hasIncompleteAspirant;
 
-  /* isAspirantRegistrationComplete — unused (desktop card grid commented out)
-  // Aspirant registration is complete when role=aspirant and documentStatus=completed
-  const isAspirantRegistrationComplete = isAspirant;
-  */
 
   const FF = "'Baloo 2', sans-serif";
   const isDark = theme.palette.mode === 'dark';
@@ -369,11 +158,6 @@ const UserDashboardPage = () => {
   const borderSubtle = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(17,24,39,0.10)';
   const borderFaint = isDark ? 'rgba(255,255,255,0.09)' : 'rgba(17,24,39,0.08)';
 
-  /* heroBg — unused (desktop hero commented out below)
-  const heroBg = isDark
-    ? 'radial-gradient(130% 150% at 6% 0%, rgba(200,24,10,0.2) 0%, rgba(10,8,8,1) 55%), radial-gradient(120% 130% at 100% 0%, rgba(37,58,154,0.16) 0%, rgba(10,8,8,1) 55%)'
-    : 'linear-gradient(135deg, rgba(200,24,10,0.07) 0%, rgba(245,168,0,0.07) 50%, rgba(37,58,154,0.05) 100%)';
-  */
   const gridOverlay = isDark
     ? 'linear-gradient(rgba(255,255,255,.012) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.012) 1px,transparent 1px)'
     : 'linear-gradient(rgba(17,24,39,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(17,24,39,.02) 1px,transparent 1px)';
@@ -506,7 +290,11 @@ const UserDashboardPage = () => {
       } catch (apiErr) {
         const resp = await fetch(src, {
           method: 'GET',
+          // Cookie mode: no token to send as a header; authenticate via the
+          // httpOnly session cookie instead (raw fetch omits cookies unless
+          // credentials:'include' is set). Legacy mode keeps the Bearer header.
           headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+          credentials: COOKIE_AUTH ? 'include' : 'same-origin',
         });
         if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
         blob = await resp.blob();
@@ -847,7 +635,7 @@ const UserDashboardPage = () => {
           >
             {t('userDashboard.actions.continueAspirantRegistration')}
           </Button>
-          <IconButton size="small" color="inherit" onClick={() => setPendingAlertDismissed(true)}>
+          <IconButton aria-label="Dismiss" size="small" color="inherit" onClick={() => setPendingAlertDismissed(true)}>
             <CloseIcon fontSize="small" />
           </IconButton>
         </Stack>
@@ -869,7 +657,7 @@ const UserDashboardPage = () => {
             >
               {t('userDashboard.actions.continueAspirantRegistration')}
             </Button>
-            <IconButton size="small" color="inherit" onClick={() => setPendingAlertDismissed(true)}>
+            <IconButton aria-label="Dismiss" size="small" color="inherit" onClick={() => setPendingAlertDismissed(true)}>
               <CloseIcon fontSize="small" />
             </IconButton>
           </Stack>
@@ -887,199 +675,10 @@ const UserDashboardPage = () => {
         {mobileHero}
         {pendingAspirantAlert}
         {isAspirant && mobileAspirantTiles}
-        <WardCandidateListPage embedded />
+        <React.Suspense fallback={null}>
+          <WardCandidateListPage embedded />
+        </React.Suspense>
       </Stack>
-
-      {/* Original desktop card-grid layout — COMMENTED OUT (unused; dashboard renders WardCandidateListPage above). Kept for easy revert.
-      <Stack spacing={3} sx={{ fontFamily: FF, pb: { xs: 2, md: 4 } }}>
-      <motion.div initial={{ opacity: 0, y: -12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.42 }}>
-        <Box sx={{
-          borderRadius: '20px',
-          overflow: 'hidden',
-          background: heroBg,
-          border: `1.5px solid ${isDark ? 'rgba(245,140,0,0.7)' : 'rgba(245,168,0,0.35)'}`,
-          boxShadow: isDark
-            ? '0 0 28px rgba(245,130,0,0.4), 0 0 60px rgba(200,80,0,0.2), 0 12px 40px rgba(0,0,0,0.6)'
-            : '0 0 0 1px rgba(245,168,0,0.08), 0 8px 32px rgba(17,24,39,0.07)',
-          position: 'relative',
-        }}>
-          <Box sx={{
-            position: 'absolute',
-            inset: 0,
-            backgroundImage: gridOverlay,
-            backgroundSize: '44px 44px',
-            pointerEvents: 'none',
-          }} />
-          <Box sx={{ display: 'flex', height: '4px' }}>
-            {[BRAND.red, BRAND.blue, BRAND.brown].map(c => <Box key={c} sx={{ flex: 1, bgcolor: c }} />)}
-          </Box>
-          <Box sx={{
-            px: 2.2,
-            py: 1,
-            display: 'flex',
-            alignItems: 'flex-start',
-            justifyContent: 'space-between',
-            flexDirection: 'column',
-            gap: 2,
-            position: 'relative',
-            zIndex: 1,
-          }}>
-            <Box>
-              <Typography sx={{ fontFamily: isAspirant ? "'Baloo 2', sans-serif" : FF, fontWeight: isAspirant ? 600 : 800, fontSize: { xs: isAspirant ? '0.8rem' : '1.55rem', md: isAspirant ? '0.8rem' : '2rem' }, lineHeight: 1.3, color: textPrimary }}>
-                {isAspirant
-                  ? t('userDashboard.aspirantBanner')
-                  : (isKannada ? 'ದಿ ರಿಯಲ್ ಪ್ರಜಾಕೀಯ' : 'The Real Prajaakeeya')}
-              </Typography>
-              {(user?.wardNumber || resolvedWardName) && (
-                <Typography sx={{ fontFamily: FF, mt: 1, fontSize: '0.95rem', color: textHigh }}>
-                  {user?.wardNumber && <Box component="span" sx={{ fontWeight: 700 }}>{t('userDashboard.details.ward', { defaultValue: 'Ward' })} {user?.wardNumber}</Box>}
-                  {user?.wardNumber && resolvedWardName && ' — '}
-                  {resolvedWardName && <Box component="span">{resolvedWardName}</Box>}
-                </Typography>
-              )}
-            </Box>
-            {totalVoters != null && (
-              <Box
-                sx={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: 1.2,
-                  px: 1,
-                  py: 0.25,
-                  borderRadius: 2,
-                  background: isDark ? 'rgba(0,0,0,0.35)' : 'rgba(255,255,255,0.7)',
-                  border: `1px solid ${BORDER}`,
-                  alignSelf: 'flex-start',
-                }}
-              >
-                <Typography sx={{ fontFamily: FF, fontSize: '0.72rem', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: textHigh, lineHeight: 1 }}>
-                  {t('userDashboard.totalVoters', { defaultValue: 'No. of Registered Citizens' })}
-                </Typography>
-                <Typography sx={{ fontFamily: FF, fontSize: { xs: '1.2rem', md: '1.4rem' }, fontWeight: 800, color: textPrimary, lineHeight: 1 }}>
-                  {totalVoters?.toLocaleString()}
-                </Typography>
-              </Box>
-            )}
-          </Box>
-        </Box>
-      </motion.div>
-
-      {pendingAspirantAlert}
-
-
-      <Box
-        sx={{
-          display: 'grid',
-          gridTemplateColumns: {
-            xs: 'repeat(2, minmax(0, 1fr))',
-            md: 'repeat(3, minmax(0, 1fr))',
-          },
-          gap: 2,
-          width: '100%',
-          mx: 'auto',
-          px: { xs: 1, sm: 0 },
-        }}
-      >
-        {displayActions.map((action, index) => (
-          <Box key={action.path} sx={{ display: 'flex', flexDirection: 'column' }}>
-            <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.34, delay: 0.12 + index * 0.05 }} style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
-              <Card
-                onClick={() => handleActionClick(action)}
-                sx={{
-                  height: '100%',
-                  borderRadius: '18px',
-                  background: isDark
-                    ? `radial-gradient(ellipse at 60% 0%, rgba(200,80,0,0.12) 0%, rgba(10,6,4,0.98) 55%), radial-gradient(ellipse at 10% 90%, rgba(${index % 2 === 0 ? '200,80,0' : '37,58,154'},0.1) 0%, transparent 60%), #0a0604`
-                    : 'linear-gradient(150deg, #fffdf7 0%, #fff8e8 100%)',
-                  backgroundImage: isDark
-                    ? `radial-gradient(circle, rgba(255,180,60,0.13) 1px, transparent 1px), radial-gradient(circle, rgba(255,120,30,0.06) 1px, transparent 1px), radial-gradient(ellipse at 60% 0%, rgba(200,80,0,0.14) 0%, transparent 55%)`
-                    : 'none',
-                  backgroundSize: isDark ? '48px 48px, 22px 22px, 100% 100%' : 'auto',
-                  backgroundPosition: isDark ? '0 0, 11px 11px, 0 0' : '0 0',
-                  border: `1.5px solid ${isDark
-                    ? (index % 2 === 0 ? 'rgba(245,140,0,0.65)' : 'rgba(80,110,240,0.55)')
-                    : (index % 2 === 0 ? 'rgba(245,168,0,0.4)' : 'rgba(37,58,154,0.35)')}`,
-                  boxShadow: isDark
-                    ? (index % 2 === 0
-                      ? '0 0 18px rgba(245,130,0,0.45), 0 0 42px rgba(200,80,0,0.2), inset 0 0 20px rgba(180,60,0,0.07)'
-                      : '0 0 18px rgba(60,90,240,0.45), 0 0 42px rgba(37,58,154,0.22), inset 0 0 20px rgba(37,58,154,0.07)')
-                    : '0 4px 20px rgba(245,168,0,0.07)',
-                  overflow: 'hidden',
-                  cursor: (isAspirantRegistrationComplete && action.path === '/user/aspirants/register') ? 'default' : 'pointer',
-                  opacity: (isAspirantRegistrationComplete && action.path === '/user/aspirants/register') ? 0.45 : 1,
-                  transition: 'transform 0.28s cubic-bezier(.17,.67,.4,1.3), box-shadow 0.3s ease, border-color 0.3s ease',
-                  '&:hover': {
-                    transform: 'translateY(-6px) scale(1.018)',
-                    boxShadow: isDark
-                      ? (index % 2 === 0
-                        ? '0 0 30px rgba(245,140,0,0.65), 0 0 70px rgba(200,80,0,0.3), 0 24px 50px rgba(0,0,0,0.6)'
-                        : '0 0 30px rgba(80,110,240,0.65), 0 0 70px rgba(37,58,154,0.35), 0 24px 50px rgba(0,0,0,0.6)')
-                      : '0 0 24px rgba(245,168,0,0.2), 0 14px 32px rgba(17,24,39,0.1)',
-                    borderColor: isDark
-                      ? (index % 2 === 0 ? 'rgba(255,160,0,0.9)' : 'rgba(100,140,255,0.8)')
-                      : (index % 2 === 0 ? 'rgba(245,168,0,0.7)' : 'rgba(37,58,154,0.6)'),
-                  },
-                }}>
-                {isDark && <Box sx={{
-                  height: '3px', background: index % 2 === 0
-                    ? 'linear-gradient(90deg, rgba(255,160,0,0) 0%, rgba(255,160,0,0.9) 45%, rgba(255,160,0,0) 100%)'
-                    : 'linear-gradient(90deg, rgba(100,140,255,0) 0%, rgba(100,140,255,0.85) 45%, rgba(100,140,255,0) 100%)'
-                }} />}
-                <CardContent sx={{ p: { xs: 2.2, md: 2.8 }, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1.6, height: '100%' }}>
-                  <Box sx={{
-                    width: 72, height: 72, borderRadius: '20px',
-                    background: isDark
-                      ? 'linear-gradient(145deg, #1a0f04 0%, #100a02 100%)'
-                      : 'radial-gradient(circle at 30% 30%, rgba(245,168,0,0.22), rgba(245,168,0,0.06))',
-                    color: GOLD,
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    border: `1.5px solid ${isDark ? 'rgba(245,168,0,0.35)' : 'rgba(245,168,0,0.4)'}`,
-                    boxShadow: isDark
-                      ? `0 0 0 5px rgba(245,140,0,0.08), 0 0 18px rgba(245,130,0,0.25), inset 0 1px 0 rgba(255,255,255,0.05)`
-                      : `0 0 0 5px rgba(245,168,0,0.1), 0 4px 14px rgba(245,168,0,0.18)`,
-                    transition: 'box-shadow 0.28s ease, transform 0.28s ease',
-                    '& svg': { fontSize: 30 },
-                  }}>
-                    {action.icon}
-                  </Box>
-                  <Typography sx={{ fontFamily: FF, fontWeight: 800, color: isDark ? '#fff' : textPrimary, fontSize: actionTitleFontSize, lineHeight: 1.2, textAlign: 'center', letterSpacing: '-0.01em', textShadow: isDark ? '0 0 18px rgba(255,255,255,0.25)' : 'none' }}>
-                    {action.title}
-                  </Typography>
-                  <Button
-                    size="small"
-                    variant="contained"
-                    sx={{
-                      fontFamily: FF,
-                      fontWeight: 700,
-                      fontSize: '0.78rem',
-                      textTransform: 'none',
-                      mt: 0.25,
-                      px: 2.5,
-                      py: 0.55,
-                      borderRadius: '20px',
-                      minWidth: { xs: '130px', md: '225px' },
-                      color: '#fff',
-                      background: 'linear-gradient(135deg, #dd1f11de 0%, #e02110c2 100%)',
-                      boxShadow: '0 4px 14px rgba(200,24,10,0.35)',
-                      letterSpacing: '0.02em',
-                      transition: 'all 0.22s ease',
-                      '&:hover': {
-                        background: 'linear-gradient(135deg, #e02010 0%, #C8180A 100%)',
-                        boxShadow: '0 6px 22px rgba(200,24,10,0.5)',
-                        transform: 'translateY(-1px)',
-                      },
-                    }}
-                  >
-                    {t('common.clickHere', { defaultValue: 'Click here' })}
-                  </Button>
-                </CardContent>
-              </Card>
-            </motion.div>
-          </Box>
-        ))}
-      </Box>
-      </Stack>
-      */}
 
       <Dialog
         open={photoFrameOpen}

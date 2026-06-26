@@ -330,10 +330,10 @@ const AdminGramaPanchayatPage: React.FC = () => {
                           <TableCell>{it.villageName}</TableCell>
                           <TableCell align="right">
                             <Tooltip title="Edit">
-                              <IconButton size="small" onClick={() => openEdit(it)}><EditIcon fontSize="small" /></IconButton>
+                              <IconButton aria-label="Edit" size="small" onClick={() => openEdit(it)}><EditIcon fontSize="small" /></IconButton>
                             </Tooltip>
                             <Tooltip title="Delete">
-                              <IconButton size="small" color="error" onClick={() => setDeleteConfirm({ open: true, item: it })}>
+                              <IconButton aria-label="Delete" size="small" color="error" onClick={() => setDeleteConfirm({ open: true, item: it })}>
                                 <DeleteIcon fontSize="small" />
                               </IconButton>
                             </Tooltip>

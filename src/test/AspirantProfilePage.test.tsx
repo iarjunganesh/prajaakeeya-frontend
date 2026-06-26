@@ -15,7 +15,8 @@
 //   - For a non-aspirant it short-circuits and renders ONLY ProfileCompletionPage
 //     (the shared profile-completion form) — no fetch.
 //   - While the aspirant fetch is in flight it shows a CircularProgress spinner.
-//   - Clicking Logout calls the auth store's logout() and navigates to '/'.
+//   - Clicking Logout calls the auth store's logout() (which hard-redirects to
+//     '/' itself; the button no longer calls navigate()).
 //
 // Setup notes:
 //   - react-i18next mocked with STABLE t/i18n refs (the fetch effect deps don't
@@ -118,7 +119,7 @@ describe('UserProfilePage (AspirantProfilePage)', () => {
     expect(await screen.findByRole('button', { name: 'common.logout' })).toBeInTheDocument();
   });
 
-  it('logs out and navigates home when Logout is clicked', async () => {
+  it('logs out when Logout is clicked', async () => {
     const logout = vi.fn();
     useAuthStore.setState({
       token: 't',
@@ -129,8 +130,10 @@ describe('UserProfilePage (AspirantProfilePage)', () => {
     renderWithProviders(<AspirantProfilePage />, { route: '/user/dashboard/profile' });
     const logoutBtn = await screen.findByRole('button', { name: 'common.logout' });
     fireEvent.click(logoutBtn);
+    // logout() itself hard-redirects to '/' (window.location.replace) — the
+    // button no longer calls navigate('/') (that caused a register-page flash
+    // before the preloader), so we only assert logout() ran.
     expect(logout).toHaveBeenCalled();
-    expect(navigate).toHaveBeenCalledWith('/');
   });
 });
 

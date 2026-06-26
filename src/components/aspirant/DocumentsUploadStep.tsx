@@ -22,6 +22,7 @@ import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import FileDownloadIcon from '@mui/icons-material/FileDownload';
 import apiClient from '../../services/apiClient';
 import LivePhotoCaptureStep from './LivePhotoCaptureStep';
+import { safeUrl } from '../../utils/safeUrl';
 
 const GOLD = '#F5A800';
 const GOLDD = 'rgba(245,168,0,0.45)';
@@ -135,7 +136,10 @@ const DocumentsUploadStep = ({
     /iPad|iPhone|iPod/.test(navigator.userAgent) ||
     (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 
-  const downloadPdf = async (url: string, filename: string) => {
+  const downloadPdf = async (rawUrl: string, filename: string) => {
+    // C-SEC-4: bail on script-capable schemes before fetch / window.open.
+    const url = safeUrl(rawUrl);
+    if (!url) { return; }
     setDownloading(true);
 
     // iOS Safari ignores the download attribute entirely — open in new tab

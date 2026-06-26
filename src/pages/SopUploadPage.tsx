@@ -27,6 +27,7 @@ import { useTranslation } from 'react-i18next';
 import useAuthStore from '../store/useAuthStore';
 import { getAspirantById } from '../services/aspirantService';
 import apiClient from '../services/apiClient';
+import { safeUrl } from '../utils/safeUrl';
 
 const GOLD = '#F5A800';
 const GOLDD = 'rgba(245,168,0,0.45)';
@@ -107,7 +108,9 @@ const SopUploadPage = () => {
     return () => { mounted = false; };
   }, []);
 
-  const downloadPdf = async (url: string, filename: string) => {
+  const downloadPdf = async (rawUrl: string, filename: string) => {
+    // C-SEC-4: bail on script-capable schemes before fetch / window.open.
+    const url = safeUrl(rawUrl);
     if (!url) return;
     setDownloading(true);
     try {

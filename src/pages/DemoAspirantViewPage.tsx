@@ -24,6 +24,7 @@ import {
 } from '@mui/icons-material';
 import { useTranslation } from 'react-i18next';
 import { BRAND } from '../theme';
+import { safeUrl } from '../utils/safeUrl';
 
 const FF = "'Baloo 2', sans-serif";
 
@@ -335,21 +336,21 @@ const DemoAspirantViewPage: React.FC = () => {
                     <SectionHeader icon={<ShareIcon fontSize="small" />} title={isKannada ? 'ಸಾಮಾಜಿಕ ವೇದಿಕೆಗಳು' : 'Social Platforms'} />
                     <Grid container spacing={1.2} sx={{ mt: 0.5 }}>
                         <Grid item xs={6} sm={3}>
-                            <Box component="a" href={aspirant.instagramLink} target="_blank" rel="noopener noreferrer"
+                            <Box component="a" href={safeUrl(aspirant.instagramLink) ?? undefined} target="_blank" rel="noopener noreferrer"
                                 sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.7, textDecoration: 'none', px: 1.2, py: 0.7, borderRadius: '10px', border: '1px solid rgba(225,48,108,0.6)', background: 'rgba(225,48,108,0.08)', '&:hover': { background: 'rgba(225,48,108,0.16)' } }}>
                                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><defs><radialGradient id="ig-demo" cx="30%" cy="107%" r="150%"><stop offset="0%" stopColor="#fdf497" /><stop offset="5%" stopColor="#fdf497" /><stop offset="45%" stopColor="#fd5949" /><stop offset="60%" stopColor="#d6249f" /><stop offset="90%" stopColor="#285AEB" /></radialGradient></defs><rect x="2" y="2" width="20" height="20" rx="6" ry="6" fill="url(#ig-demo)" /><circle cx="12" cy="12" r="4.5" stroke="white" strokeWidth="2" fill="none" /><circle cx="17.5" cy="6.5" r="1.2" fill="white" /></svg>
                                 <Typography variant="body2" sx={{ fontFamily: FF, color: '#E1306C', fontWeight: 600 }}>Instagram</Typography>
                             </Box>
                         </Grid>
                         <Grid item xs={6} sm={3}>
-                            <Box component="a" href={aspirant.facebookLink} target="_blank" rel="noopener noreferrer"
+                            <Box component="a" href={safeUrl(aspirant.facebookLink) ?? undefined} target="_blank" rel="noopener noreferrer"
                                 sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.7, textDecoration: 'none', px: 1.2, py: 0.7, borderRadius: '10px', border: '1px solid rgba(24,119,242,0.6)', background: 'rgba(24,119,242,0.08)', '&:hover': { background: 'rgba(24,119,242,0.16)' } }}>
                                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill="#1877F2" /><path d="M15.5 8H13.5C13.2 8 13 8.2 13 8.5V10H15.5L15.2 12.5H13V19H10.5V12.5H9V10H10.5V8.5C10.5 6.6 11.6 5.5 13.5 5.5H15.5V8Z" fill="white" /></svg>
                                 <Typography variant="body2" sx={{ fontFamily: FF, color: '#1877F2', fontWeight: 600 }}>Facebook</Typography>
                             </Box>
                         </Grid>
                         <Grid item xs={6} sm={3}>
-                            <Box component="a" href={aspirant.twitterLink} target="_blank" rel="noopener noreferrer"
+                            <Box component="a" href={safeUrl(aspirant.twitterLink) ?? undefined} target="_blank" rel="noopener noreferrer"
                                 sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.7, textDecoration: 'none', px: 1.2, py: 0.7, borderRadius: '10px', border: `1px solid ${isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.3)'}`, background: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.05)', '&:hover': { background: isDark ? 'rgba(255,255,255,0.16)' : 'rgba(0,0,0,0.1)' } }}>
                                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="12" fill={isDark ? '#ffffff' : '#000000'} /><path d="M13.6 10.8L17.7 6H16.7L13.2 10.2L10.4 6H7L11.3 12.7L7 17.8H8L11.7 13.4L14.6 17.8H18L13.6 10.8ZM12.2 12.8L11.8 12.2L8.4 6.8H10L12.5 10.5L12.9 11.1L16.7 17.1H15L12.2 12.8Z" fill={isDark ? '#000000' : '#ffffff'} /></svg>
                                 <Typography variant="body2" sx={{ fontFamily: FF, color: isDark ? '#ffffff' : '#000000', fontWeight: 600 }}>Twitter</Typography>

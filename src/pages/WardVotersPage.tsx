@@ -470,6 +470,7 @@ const WardVotersPage: React.FC = () => {
                         </Typography>
                     </Stack>
                     <IconButton
+                        aria-label="Close"
                         size="small"
                         onClick={() => setReportOpen(false)}
                         sx={{ color: 'text.secondary' }}
@@ -595,6 +596,7 @@ const WardVotersPage: React.FC = () => {
                                             </Typography>
                                         </Stack>
                                         <IconButton
+                                            aria-label="Remove file"
                                             size="small"
                                             onClick={() => setReportFile(null)}
                                             sx={{
@@ -652,7 +654,7 @@ const WardVotersPage: React.FC = () => {
             >
                 <DialogTitle sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontFamily: FF, fontWeight: 700 }}>
                     {photoDialogName || (t('menu.myProfile') || 'Profile')}
-                    <IconButton size="small" onClick={() => setPhotoDialogOpen(false)}>
+                    <IconButton aria-label="Close" size="small" onClick={() => setPhotoDialogOpen(false)}>
                         <CloseIcon />
                     </IconButton>
                 </DialogTitle>

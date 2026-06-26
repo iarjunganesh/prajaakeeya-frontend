@@ -182,8 +182,8 @@ const AdminParliamentaryPage: React.FC = () => {
                           <TableCell>{it.name}</TableCell>
                           <TableCell>{it.state}</TableCell>
                           <TableCell align="right">
-                            <Tooltip title="Edit"><IconButton size="small" onClick={() => openEdit(it)}><EditIcon /></IconButton></Tooltip>
-                            <Tooltip title="Delete"><IconButton size="small" onClick={() => confirmDelete(it)} color="error"><DeleteIcon /></IconButton></Tooltip>
+                            <Tooltip title="Edit"><IconButton aria-label="Edit" size="small" onClick={() => openEdit(it)}><EditIcon /></IconButton></Tooltip>
+                            <Tooltip title="Delete"><IconButton aria-label="Delete" size="small" onClick={() => confirmDelete(it)} color="error"><DeleteIcon /></IconButton></Tooltip>
                           </TableCell>
                         </TableRow>
                       ))

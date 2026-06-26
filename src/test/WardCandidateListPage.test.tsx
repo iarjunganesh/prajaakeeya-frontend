@@ -156,9 +156,11 @@ describe('WardCandidateListPage', () => {
     renderWithProviders(<WardCandidateListPage />, { route: '/' });
     // The list fetch resolves with a single demo aspirant, so the page shows its
     // "no real aspirants yet" empty-state card. Generous timeout for the async
-    // on-mount fetch chain (elections -> loadAspirants).
+    // on-mount fetch chain (elections -> loadAspirants) — raised to 8s so it
+    // doesn't flake under heavy parallel suite load (passes alone at 3s, but the
+    // full 277-test run can starve this chain past 3s).
     expect(
-      await screen.findByText('pages.wardCandidates.noAspirantsTitle', {}, { timeout: 3000 }),
+      await screen.findByText('pages.wardCandidates.noAspirantsTitle', {}, { timeout: 8000 }),
     ).toBeInTheDocument();
   });
 

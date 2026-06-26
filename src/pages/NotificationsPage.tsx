@@ -584,6 +584,7 @@ export default function NotificationsPage() {
                       >
                         <Tooltip title={t('notifications.delete') || 'Delete'}>
                           <IconButton
+                            aria-label="Delete notification"
                             size="small"
                             onClick={(e) => {
                               e.stopPropagation();

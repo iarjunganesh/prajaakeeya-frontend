@@ -121,7 +121,9 @@ describe('NotificationsPage', () => {
     const title = await screen.findByText('New aspirant in your ward');
     // The delete IconButton lives inside the row; scope the query to that row's card.
     const row = title.closest('div')!.parentElement as HTMLElement;
-    const delBtn = within(row).getByRole('button', { name: 'notifications.delete' });
+    // The button now carries an explicit aria-label ("Delete notification"),
+    // which takes precedence over the Tooltip title for its accessible name.
+    const delBtn = within(row).getByRole('button', { name: 'Delete notification' });
     fireEvent.click(delBtn);
     await waitFor(() => expect(vi.mocked(deleteNotification)).toHaveBeenCalledWith(101));
   });

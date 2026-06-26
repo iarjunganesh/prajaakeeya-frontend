@@ -27,6 +27,7 @@ import { Delete as DeleteIcon } from '@mui/icons-material';
 import apiClient from '../../services/apiClient';
 import { deleteAspirantsMeeting } from '../../services/aspirantService';
 import { useTranslation } from 'react-i18next';
+import { safeUrl } from '../../utils/safeUrl';
 import googleMeetImg from '../../assets/images/googl-meet.webp';
 import zoomImg from '../../assets/images/zoom.webp';
 
@@ -527,7 +528,9 @@ const AspirantMeetingLinksTab: React.FC<AspirantMeetingLinksTabProps> = ({
                                                 })}
                                                 onClick={() => {
                                                     if (!meeting.meetingLink) return;
-                                                    const link = normalizeMeetingUrl(meeting.meetingLink);
+                                                    // C-SEC-4: sanitize aspirant-supplied meeting link before navigating.
+                                                    const link = safeUrl(normalizeMeetingUrl(meeting.meetingLink));
+                                                    if (!link) return;
                                                     // See note in WardCandidateListPage — iOS WebView / standalone
                                                     // PWA silently no-ops window.open('_blank'), causing blank
                                                     // Instagram links. Use same-window nav so iOS routes the

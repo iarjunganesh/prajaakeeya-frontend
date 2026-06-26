@@ -178,8 +178,14 @@ const AspirantRegistrationPage = () => {
   const watchedValues = watch();
   useEffect(() => {
     try {
+      // L-SEC-2: never persist PII to localStorage. phone + address come from the
+      // user's account (defaultValues above) and repopulate on reload, so dropping
+      // them from the saved draft loses nothing for the user but keeps them out of
+      // a store any XSS can read. The draft only needs the non-sensitive,
+      // hand-entered fields.
+      const { phone: _phone, address: _address, ...safeValues } = watchedValues;
       const payload = {
-        values: watchedValues,
+        values: safeValues,
         answers,
       };
       localStorage.setItem(DRAFT_KEY, JSON.stringify(payload));

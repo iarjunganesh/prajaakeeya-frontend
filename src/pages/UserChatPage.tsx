@@ -7,6 +7,7 @@ import ForumIcon from '@mui/icons-material/Forum';
 import CloseIcon from '@mui/icons-material/Close';
 import RefreshIcon from '@mui/icons-material/Refresh';
 import useAuthStore from '../store/useAuthStore';
+import { COOKIE_AUTH } from '../config/authMode';
 import { useTranslation } from 'react-i18next';
 import { getAspirantMessages, postUserChatMessage, subscribeToAspirantChat, AspirantChatMessageDto } from '../services/aspirantChatService';
 
@@ -66,9 +67,13 @@ const UserChatPage: React.FC = () => {
     // fallback poll reconciles in case the stream drops silently.
     React.useEffect(() => {
         if (!aspirantId) return;
+        // Cookie mode authenticates the SSE stream via the httpOnly cookie
+        // (subscribeToAspirantChat uses withCredentials), so don't gate on a
+        // client-side token that doesn't exist in that mode. Legacy mode needs
+        // the token to put in the stream URL.
         const token = useAuthStore.getState().token;
-        const es = token
-            ? subscribeToAspirantChat(Number(aspirantId), token, {
+        const es = (COOKIE_AUTH || token)
+            ? subscribeToAspirantChat(Number(aspirantId), token ?? '', {
                   onCreated: (msg) => {
                       setMessages((prev) => {
                           if (prev.some((m) => m.id === msg.id)) return prev;
@@ -116,7 +121,7 @@ const UserChatPage: React.FC = () => {
                         <Typography variant="body2" color="text.secondary">{t('discussion.roomLabel') || 'Interview room'}</Typography>
                     </Box>
                 </Box>
-                <IconButton onClick={() => navigate(-1)}><CloseIcon /></IconButton>
+                <IconButton aria-label="Go back" onClick={() => navigate(-1)}><CloseIcon /></IconButton>
             </Box>
 
             <Card sx={{ display: 'flex', flexDirection: 'column', flex: 1 }}>

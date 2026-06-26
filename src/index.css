@@ -1,4 +1,6 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Playfair+Display:wght@400;500;600;700&display=swap');
+/* C-PERF-2: Inter + Playfair Display are now loaded via the single
+   consolidated <link> in index.html (faster, non-render-blocking) instead
+   of this @import, which CSS serialises after the parent stylesheet. */
 
 /* Global base styles */
 html,

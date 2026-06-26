@@ -12,7 +12,13 @@ import AuthLayout from "./layouts/AuthLayout";
 import PublicLayout from "./layouts/PublicLayout";
 import GuestLayout from "./layouts/GuestLayout";
 import useAuthStore from "./store/useAuthStore";
-import { setupPushForUser, setPushNavigator, consumePendingPushRoute } from "./services/pushNotifications";
+import { COOKIE_AUTH } from "./config/authMode";
+// C-PERF-4 follow-up: load the push-notification service lazily. A static import
+// pulls the whole Firebase SDK (firebase/app + firebase/messaging) into the main
+// entry chunk, so every visitor downloads it on first paint even though push only
+// matters for authenticated users who grant permission. Importing it on demand
+// inside the effects below moves Firebase into its own chunk, off the critical path.
+const loadPush = () => import("./services/pushNotifications");
 import Preloader, { dismissPreloader } from "./components/Preloader";
 import OfflineBanner from "./components/OfflineBanner";
 
@@ -31,8 +37,6 @@ const COMING_SOON = false;
 const AdminLoginPage = lazy(() => import("./pages/AdminLoginPage"));
 const AdminDashboardPage = lazy(() => import("./pages/AdminDashboardPage"));
 const CreateWardPage = lazy(() => import("./pages/CreateWardPage"));
-const ReportsListPage = lazy(() => import("./pages/admin/ReportsListPage"));
-const ReportDetailsPage = lazy(() => import("./pages/admin/ReportDetailsPage"));
 const AdminUsersListPage = lazy(() => import("./pages/admin/AdminUsersListPage"));
 const AdminUserDetailsPage = lazy(() => import("./pages/admin/AdminUserDetailsPage"));
 const AdminCreateUserPage = lazy(() => import("./pages/admin/AdminCreateUserPage"));
@@ -107,8 +111,10 @@ const App = () => {
   useEffect(() => {
     // Let push-notification deep links (iOS native bridge) navigate in-SPA
     // instead of doing a full page reload.
-    setPushNavigator((path) => navigate(path));
-    return () => setPushNavigator(null);
+    void loadPush().then((m) => m.setPushNavigator((path) => navigate(path)));
+    return () => {
+      void loadPush().then((m) => m.setPushNavigator(null));
+    };
   }, [navigate]);
 
   useEffect(() => {
@@ -119,12 +125,13 @@ const App = () => {
     // "navigates only after a refresh"). Triggers: mount, visibilitychange,
     // window focus, and the PUSH_NAVIGATE message as a fast-path nudge. The
     // consumer deletes the stash, so multiple triggers never double-navigate.
-    void consumePendingPushRoute();
+    const consumeRoute = () => void loadPush().then((m) => m.consumePendingPushRoute());
+    consumeRoute();
 
     const onVisible = () => {
-      if (document.visibilityState === "visible") void consumePendingPushRoute();
+      if (document.visibilityState === "visible") consumeRoute();
     };
-    const onFocus = () => void consumePendingPushRoute();
+    const onFocus = () => consumeRoute();
     document.addEventListener("visibilitychange", onVisible);
     window.addEventListener("focus", onFocus);
 
@@ -132,7 +139,7 @@ const App = () => {
     if ("serviceWorker" in navigator) {
       onSwMessage = (event: MessageEvent) => {
         const msg = event.data as { type?: string } | null;
-        if (msg && msg.type === "PUSH_NAVIGATE") void consumePendingPushRoute();
+        if (msg && msg.type === "PUSH_NAVIGATE") consumeRoute();
       };
       navigator.serviceWorker.addEventListener("message", onSwMessage);
       // addEventListener('message') does not start the client message queue;
@@ -150,11 +157,26 @@ const App = () => {
   }, []);
 
   useEffect(() => {
-    // On page reload / first mount, if we have a persisted token, fetch fresh user data
-    if (token) {
+    // On page reload / first mount, restore the session by fetching fresh user
+    // data. Legacy mode only bothers when a token was persisted. Cookie mode has
+    // no client-side token — the httpOnly session cookie is the only signal —
+    // so we always ask /auth/me, which returns the user if the cookie is valid
+    // or 401s (→ interceptor handles refresh/logout) if not.
+    //
+    // EXCEPTION: skip the probe on the OAuth-transition pages (/auth/callback and
+    // the /register celebration screen). There the session is still being
+    // established — AuthCallbackPage runs the code→cookie exchange itself, then
+    // navigates onward. Probing /auth/me here just races the exchange and returns
+    // a (harmless but noisy) 401 before the cookie is committed. Once the user
+    // lands on a real page, this effect re-runs and the probe succeeds with the
+    // cookie now in place.
+    const inAuthTransition =
+      location.pathname.startsWith('/auth/callback') ||
+      location.pathname.startsWith('/register');
+    if ((COOKIE_AUTH || token) && !inAuthTransition) {
       void fetchProfile();
     }
-  }, [token, fetchProfile]);
+  }, [token, fetchProfile, location.pathname]);
 
   useEffect(() => {
     // Constituency onboarding guard. The decision must be data-driven (are all
@@ -187,8 +209,22 @@ const App = () => {
     // Wire web push (FCM) for the signed-in user: registers silently if the
     // user already granted notifications, otherwise prompts on their next
     // gesture. No-op unless Firebase env is configured + push is supported.
-    if (isAuthenticated && token) {
-      return setupPushForUser();
+    // Cookie mode has no client-side token, so gate on isAuthenticated alone —
+    // requiring `token` here would silently disable push for cookie-auth users.
+    if (isAuthenticated && (COOKIE_AUTH || token)) {
+      // The service's setupPushForUser() returns a cleanup fn, but the dynamic
+      // import resolves async — capture it and run it when the effect tears down
+      // (even if teardown happens before the import settles).
+      let cleanup: (() => void) | undefined;
+      let cancelled = false;
+      void loadPush().then((m) => {
+        if (cancelled) return;
+        cleanup = m.setupPushForUser();
+      });
+      return () => {
+        cancelled = true;
+        cleanup?.();
+      };
     }
   }, [isAuthenticated, token]);
 
@@ -314,8 +350,6 @@ const App = () => {
             <Route path="dashboard" element={<AdminDashboardPage />} />
             <Route path="wards/create" element={<CreateWardPage />} />
             <Route path="voting-results" element={<VotingResultPage />} />
-            <Route path="reports" element={<ReportsListPage />} />
-            <Route path="reports/:id" element={<ReportDetailsPage />} />
             <Route path="users" element={<AdminUsersListPage />} />
             <Route path="users/create" element={<AdminCreateUserPage />} />
             <Route path="users/:id/edit" element={<AdminEditUserPage />} />
@@ -331,7 +365,7 @@ const App = () => {
             />
             <Route path="registered-aspirants" element={<AdminAspirantListPage />} />
             <Route path="registered-aspirants/:id" element={<AdminUserDetailsPage />} />
-            <Route path="/admin/users/:id" element={<AdminUserDetailsPage />} />
+            <Route path="users/:id" element={<AdminUserDetailsPage />} />
           </Route>
 
           {/* Standalone onboarding route — auth required, no UserLayout chrome */}

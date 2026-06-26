@@ -22,6 +22,7 @@ import {
 import { useTranslation } from "react-i18next";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { getGoogleOAuthUrl } from "../services/authService";
+import { COOKIE_AUTH } from "../config/authMode";
 import useAuthStore from "../store/useAuthStore";
 import * as yup from "yup";
 import SplitAuthLayout from "../components/SplitAuthLayout";
@@ -126,7 +127,13 @@ const UserRegisterPage = () => {
     if (!stored) return;
     try {
       const parsed = JSON.parse(stored);
-      if (parsed?.token && parsed?.user) {
+      // In cookie mode there is no token (the httpOnly session cookie was
+      // already set by the exchange), so require only `user`; legacy mode still
+      // carries the JWT and both must be present.
+      const hasValidPending = COOKIE_AUTH
+        ? Boolean(parsed?.user)
+        : Boolean(parsed?.token && parsed?.user);
+      if (hasValidPending) {
         setPendingAuth(parsed);
         setShowCelebration(true);
       }

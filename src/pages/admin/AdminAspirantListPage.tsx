@@ -20,31 +20,53 @@ const AdminAspirantListPage: React.FC = () => {
   const [total, setTotal] = useState(0);
   const limit = 20;
 
+  // Monotonic request id: only the most recently issued fetch is allowed to
+  // write state. If two fetches overlap (StrictMode's dev double-invoke, fast
+  // typing, rapid pagination), the superseded one's response is ignored — so the
+  // spinner and rows don't flicker as stale responses land out of order.
+  const reqIdRef = React.useRef(0);
+
   const fetchAspirants = useCallback((pageNum: number, searchTerm: string) => {
+    const reqId = ++reqIdRef.current;
     setLoading(true);
     setError('');
     getAllAspirants(pageNum, limit, searchTerm || undefined)
       .then((resp) => {
+        if (reqId !== reqIdRef.current) return; // a newer request superseded this one
         setAspirants(resp.data.data);
         setTotal(resp.data.total);
         setTotalPages(resp.data.totalPages);
       })
-      .catch((err) => setError(err?.response?.data?.message || 'Failed to load aspirants'))
-      .finally(() => setLoading(false));
+      .catch((err) => {
+        if (reqId !== reqIdRef.current) return;
+        setError(err?.response?.data?.message || 'Failed to load aspirants');
+      })
+      .finally(() => {
+        if (reqId !== reqIdRef.current) return; // don't clear the spinner for a stale request
+        setLoading(false);
+      });
   }, []);
 
+  // Single fetch path for both the initial load and search. Previously a
+  // separate mount effect ALSO called fetchAspirants(1, ''), so the page issued
+  // two overlapping page-1 requests on load (three under StrictMode's double-
+  // invoke in dev) — the cause of the request spam and the spinner flicker.
+  // The initial load runs immediately (no 400ms delay); subsequent keystrokes
+  // are debounced.
+  const isFirstRun = React.useRef(true);
   useEffect(() => {
-    fetchAspirants(1, '');
-  }, [fetchAspirants]);
-
-  // Debounce search — fires 400ms after user stops typing
-  useEffect(() => {
+    if (isFirstRun.current) {
+      isFirstRun.current = false;
+      setPage(1);
+      fetchAspirants(1, search);
+      return;
+    }
     const timer = setTimeout(() => {
       setPage(1);
       fetchAspirants(1, search);
     }, 400);
     return () => clearTimeout(timer);
-  }, [search]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [search, fetchAspirants]);
 
   return (
     <Box>
@@ -138,7 +160,7 @@ const AdminAspirantListPage: React.FC = () => {
                                 size="small"
                                 variant="outlined"
                                 startIcon={<VisibilityIcon fontSize="small" />}
-                                onClick={() => navigate(`/admin/users/${a.id}`)}
+                                onClick={() => navigate(`/admin/registered-aspirants/${a.id}`)}
                               >
                                 View
                               </Button>

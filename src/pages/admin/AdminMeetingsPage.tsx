@@ -31,6 +31,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import meetingsService, { Meeting } from '../../services/meetingsService';
 import { getWards } from '../../services/wardService';
 import { Autocomplete } from '@mui/material';
+import { safeUrl } from '../../utils/safeUrl';
 
 const AdminMeetingsPage: React.FC = () => {
     const [meetings, setMeetings] = useState<Meeting[]>([]);
@@ -112,7 +113,10 @@ const AdminMeetingsPage: React.FC = () => {
     };
 
     const openMeetingLink = (url: string) => {
-        window.open(url, '_blank');
+        // C-SEC-4: meetingLink is user-supplied — block script-capable schemes.
+        const safe = safeUrl(url);
+        if (!safe) return;
+        window.open(safe, '_blank');
     };
 
     return (
@@ -243,6 +247,7 @@ const AdminMeetingsPage: React.FC = () => {
                                                     <TableCell align="right">
                                                         <Tooltip title="Join Meeting">
                                                             <IconButton
+                                                                aria-label="Open meeting link"
                                                                 size="small"
                                                                 onClick={() => openMeetingLink(meeting.meetingLink)}
                                                                 color="primary"
@@ -252,6 +257,7 @@ const AdminMeetingsPage: React.FC = () => {
                                                         </Tooltip>
                                                         <Tooltip title="Delete Meeting">
                                                             <IconButton
+                                                                aria-label="Delete meeting"
                                                                 size="small"
                                                                 onClick={() => handleDeleteClick(meeting)}
                                                                 color="error"

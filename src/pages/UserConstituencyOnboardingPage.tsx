@@ -37,6 +37,7 @@ import {
   type GPVillage,
 } from "../services/electionService";
 import { updateUserConstituencies } from "../services/authService";
+import { COOKIE_AUTH } from "../config/authMode";
 import useAuthStore from "../store/useAuthStore";
 import LanguageSelector from "../components/LanguageSelector";
 import { BRAND } from "../theme";
@@ -361,7 +362,15 @@ const UserConstituencyOnboardingPage = () => {
       payload.municipalCorporationConstituencyId != null ||
       payload.gramPanchayatConstituencyId != null;
 
-    if (!hasAnything || !token) {
+    // In cookie mode there is no client-side token (the httpOnly session cookie
+    // authenticates), so DON'T gate the save on `token` — that check would be
+    // always-true and silently skip the backend update, leaving the user's
+    // selection unsaved. Only the "nothing selected" case skips the save; auth
+    // is guaranteed since this page is behind an auth guard.
+    const isAuthed = COOKIE_AUTH
+      ? useAuthStore.getState().isAuthenticated
+      : Boolean(token);
+    if (!hasAnything || !isAuthed) {
       navigate("/user/dashboard", { replace: true });
       return;
     }
@@ -370,7 +379,8 @@ const UserConstituencyOnboardingPage = () => {
     setSubmitError(null);
     try {
       const { data } = await updateUserConstituencies(payload);
-      setAuth(token, data);
+      // Cookie mode: pass '' (no token to pin); legacy mode keeps the token.
+      setAuth(COOKIE_AUTH ? '' : (token ?? ''), data);
       // The POST response only carries the constituency IDs, not the nested
       // `municipalCorporationConstituency` / `gramPanchayatConstituency` objects
       // that the dashboard checks to render local-body tiles. Refresh from

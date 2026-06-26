@@ -77,7 +77,10 @@ const UserLayout = () => {
   // Derive ward number from user profile (already available from /auth/me) — no extra API call needed
   const wardNumber = displayUser.wardNumber || displayUser.wardId || null;
 
-  const handleLogout = () => { logout(); navigate('/'); };
+  // logout() itself hard-redirects to '/' (window.location.replace) once auth
+  // state is cleared — do NOT navigate() here too, or the client-side nav races
+  // the reload and flashes the register/home page before the preloader.
+  const handleLogout = () => { logout(); };
 
   // ── Mobile bottom navigation (xs only). Mirrors the dashboard's primary
   //    actions; the dashboard "Home" now shows the aspirants list with tabs.

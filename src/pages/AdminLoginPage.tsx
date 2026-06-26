@@ -12,6 +12,7 @@ import { useNavigate } from 'react-router-dom';
 import useAuthStore from '../store/useAuthStore';
 import useThemeStore from '../store/useThemeStore';
 import { adminLoginWithPassword } from '../services/authService';
+import { COOKIE_AUTH } from '../config/authMode';
 import { isMockMode } from '../config/appMode';
 import * as yup from 'yup';
 import { emailSchema } from '../utils/validation';
@@ -66,7 +67,10 @@ const AdminLoginPage = () => {
         setAuth(dummyToken, dummyUser as any);
       } else {
         const { token, user } = await adminLoginWithPassword({ email: values.email, password: values.password });
-        setAuth(token, user);
+        // Cookie mode: the admin/login response sets the httpOnly session cookie;
+        // the returned `token` is only for native/mobile clients, so ignore it on
+        // web and keep client state token-free. Legacy mode pins the Bearer token.
+        setAuth(COOKIE_AUTH ? '' : token, user);
       }
 
       navigate('/admin/users', { replace: true });
@@ -113,6 +117,7 @@ const AdminLoginPage = () => {
       {/* Theme toggle */}
       <Tooltip title={mode === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}>
         <IconButton
+          aria-label="Toggle theme"
           onClick={toggleTheme}
           size="small"
           sx={{
