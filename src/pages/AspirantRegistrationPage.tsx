@@ -307,16 +307,7 @@ const AspirantRegistrationPage = () => {
       linkedinLink: values.linkedinLink || null,
       twitterLink: values.twitterLink || null,
       whatsappNumber: values.whatsappNumber || null,
-      sopAgreed: true,
-      identityBackground: answers[0] || '',
-      resignationPledge: answers[1] || '',
-      noHighCommand: answers[2] || '',
-      technicalCompetence: answers[3] || '',
-      transparency: answers[4] || '',
-      emergencyProtocol: answers[5] || '',
-      expertConsultation: answers[6] || '',
-      voterFeedback: answers[7] || '',
-      primaryRule: answers[8] || ''
+      sopAgreed: true
     };
 
     // console.info('Submitting aspirant payload:', payload);
