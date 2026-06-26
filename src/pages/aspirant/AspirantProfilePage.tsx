@@ -175,7 +175,9 @@ const AspirantProfilePage: React.FC = () => {
                     fullWidth
                     variant="outlined"
                     startIcon={<LogoutIcon />}
-                    onClick={() => { logout(); navigate('/'); }}
+                    // logout() hard-redirects to '/' itself; no navigate() here
+                    // or it races the reload and flashes a page before preloader.
+                    onClick={() => { logout(); }}
                     sx={{
                         fontWeight: 700,
                         textTransform: 'none',

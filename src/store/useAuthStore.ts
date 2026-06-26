@@ -77,51 +77,20 @@ const useAuthStore = create<AuthState>()(
         Object.entries(preserved).forEach(([key, val]) => localStorage.setItem(key, val));
       },
       logout: async () => {
-        // Remove this device's FCM push token FIRST — while the JWT is still
-        // valid — and AWAIT it so the backend DELETE actually completes (and
-        // FCM's deleteToken runs) before we wipe auth and hard-reload. Capped at
-        // 3s so a slow/unreachable API can't block logout. (Dynamic import
-        // avoids a circular dependency with apiClient.)
-        try {
-          const push = await import('../services/pushNotifications');
-          await Promise.race([
-            push.disablePushNotifications(),
-            new Promise((resolve) => setTimeout(resolve, 3000)),
-          ]);
-        } catch {
-          /* best-effort — backend also self-prunes stale tokens */
-        }
-        // Cookie mode: JavaScript cannot delete an httpOnly cookie, so we MUST
-        // ask the server to clear the `session` cookie. Fire it while the cookie
-        // is still valid, before wiping state and hard-reloading. Best-effort
-        // and capped so a slow/unreachable API can't block logout (the endpoint
-        // succeeds even with no active session). No-op in legacy header mode.
-        if (COOKIE_AUTH) {
-          try {
-            const { logoutSession } = await import('../services/authService');
-            await Promise.race([
-              logoutSession(),
-              new Promise((resolve) => setTimeout(resolve, 3000)),
-            ]);
-          } catch {
-            /* best-effort — the cookie also expires server-side on its own */
-          }
-        }
-        // H-SEC-3: Drop the service-worker cache of /api/* responses
-        // ('api-cache', configured in vite.config.js). It can hold the current
-        // user's profile / voter list / chat; without this, on a shared device
-        // the next user could be served the previous user's data from the SW
-        // cache during an offline blip. Best-effort — never block logout.
-        if (typeof window !== 'undefined' && 'caches' in window) {
-          try {
-            await caches.delete('api-cache');
-          } catch {
-            /* ignore — cache may not exist (no SW in dev / first load) */
-          }
-        }
+        // Capture the JWT/header BEFORE we wipe state, so the best-effort backend
+        // cleanup below (which needs a valid session) can still run afterwards.
+        const hadAuthHeader = apiClient.defaults.headers.common.Authorization;
+
+        // ── 1. Clear auth state SYNCHRONOUSLY, first thing ──────────────────
+        // The previous order awaited push-token + cookie + cache deletion (up to
+        // ~6s) BEFORE clearing isAuthenticated, so the UI still looked logged in
+        // during that window — the user briefly saw the dashboard before logout
+        // "took". Flip it: drop auth state immediately so the app reflects logged
+        // out instantly, then do the slow best-effort cleanup in the background.
         set({ token: null, user: null, isAdmin: false, isAuthenticated: false });
         setSentryUser(null);
         delete apiClient.defaults.headers.common.Authorization;
+
         // Clear all localStorage except theme, language, and civic raised state
         const preserveKeys = ['theme-storage', 'i18nextLng'];
         // Preserve all civic_raised_* keys so hand-raise history survives logout
@@ -136,9 +105,49 @@ const useAuthStore = create<AuthState>()(
         });
         localStorage.clear();
         Object.entries(preserved).forEach(([key, val]) => localStorage.setItem(key, val));
-        // Hard refresh to ensure latest build is loaded (clears SW cache).
-        // replace() (not href=) so logout doesn't leave the post-logout page on
-        // the history stack — prevents back-button loops back into a stale session.
+
+        // ── 2. Best-effort backend/cache cleanup (does NOT block the UI) ─────
+        // Remove this device's FCM push token, clear the httpOnly session cookie
+        // (cookie mode — JS can't delete it, only the server can), and drop the
+        // SW api-cache (H-SEC-3). Each is capped so a slow/unreachable API can't
+        // hang logout. The push/cookie calls still carry credentials: the cookie
+        // is sent until the server clears it, and the captured header is restored
+        // just for these requests. All failures are swallowed.
+        if (hadAuthHeader) {
+          apiClient.defaults.headers.common.Authorization = hadAuthHeader;
+        }
+        // Push-token removal and SW-cache deletion are truly fire-and-forget —
+        // they don't need to finish before we redirect, so we never await them.
+        void import('../services/pushNotifications')
+          .then((push) => push.disablePushNotifications())
+          .catch(() => undefined);
+        if (typeof window !== 'undefined' && 'caches' in window) {
+          void caches.delete('api-cache').catch(() => undefined);
+        }
+        // Cookie clear (cookie mode) is the one call worth a SHORT wait — we'd
+        // like the server to drop the httpOnly session before the reload — but
+        // capped tight (600ms) so the redirect (and preloader) appears almost
+        // instantly. If it doesn't finish in time, the cookie still expires
+        // server-side on its own, so this stays best-effort.
+        if (COOKIE_AUTH) {
+          try {
+            const { logoutSession } = await import('../services/authService');
+            await Promise.race([
+              logoutSession().catch(() => undefined),
+              new Promise((resolve) => setTimeout(resolve, 600)),
+            ]);
+          } catch {
+            /* best-effort — cookie expires server-side regardless */
+          }
+        }
+        delete apiClient.defaults.headers.common.Authorization;
+
+        // ── 3. Hard refresh to '/' so the next session loads the latest build ─
+        // This shows the preloader and lands on HomePage. replace() (not href=)
+        // so logout doesn't leave the post-logout page on the history stack —
+        // prevents back-button loops back into a stale session. Callers must NOT
+        // also navigate() — a client-side nav here races this hard reload and
+        // briefly flashes the register/home page before the preloader appears.
         window.location.replace('/');
       },
       fetchProfile: async () => {

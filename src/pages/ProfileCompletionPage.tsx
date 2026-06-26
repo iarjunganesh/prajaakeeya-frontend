@@ -1510,7 +1510,9 @@ const ProfileCompletionPage = ({ hideLogout }: { hideLogout?: boolean } = {}) =>
                     fullWidth
                     variant="outlined"
                     startIcon={<LogoutIcon />}
-                    onClick={() => { logout(); navigate('/'); }}
+                    // logout() hard-redirects to '/' itself; no navigate() here
+                    // or it races the reload and flashes a page before preloader.
+                    onClick={() => { logout(); }}
                     sx={{
                         borderRadius: 50,
                         fontWeight: 700,
@@ -1618,8 +1620,9 @@ const ProfileCompletionPage = ({ hideLogout }: { hideLogout?: boolean } = {}) =>
                                 setDeleteLoading(true);
                                 try {
                                     await apiClient.delete('/users/me');
+                                    // logout() hard-redirects to '/' itself — no
+                                    // navigate() needed (it would race the reload).
                                     logout();
-                                    navigate('/');
                                 } catch (err: any) {
                                     showMessage(err?.response?.data?.message || 'Failed to delete account', 'error');
                                 } finally {
