@@ -46,16 +46,26 @@ apiClient.interceptors.response.use(
   async (error) => {
     if (COOKIE_AUTH && error.response?.status === 401) {
       const original = error.config;
-      // "Soft" auth endpoints: a 401 here is normal ("not logged in" / session
-      // gone) and is handled by the caller — it must NOT trigger refresh or the
-      // logout-with-reload machinery. /auth/me in particular is the session
-      // probe on every page load; treating its 401 as a hard logout caused an
-      // infinite loop (me → refresh → logout → reload → me …). The refresh and
-      // login endpoints are excluded too so we never try to refresh them.
+      // "Soft" auth endpoints: a 401 here is normal and must NOT trigger refresh
+      // or the logout machinery — these are the refresh/login endpoints we can
+      // never refresh (refreshing them would recurse or be meaningless).
+      //
+      // /auth/me is deliberately NOT in this list. It is the session probe fired
+      // on every page load/navigation (App.tsx's fetchProfile effect), so it is
+      // the only call that drives isAuthenticated. With a 15-min access token and
+      // a 7-day refresh cookie, excluding /auth/me turned the access TTL into a
+      // hard 15-min session cap: its 401 skipped refresh, fetchProfile's catch
+      // flipped isAuthenticated=false, and the user was bounced to login even
+      // though the refresh cookie was still valid. Letting /auth/me 401 flow
+      // through the shared single-flight refresh + retry keeps the user logged in
+      // for the full refresh window. The old infinite-loop risk the comment used
+      // to warn about required logout() (window.location.replace) on the refresh-
+      // failure path; that path now calls clearSession() (no reload) and the
+      // original._retried flag caps it at a single refresh attempt — so a genuine
+      // refresh expiry routes to login once, with no loop.
       const isAuthEndpoint =
         typeof original?.url === 'string' &&
-        (original.url.includes('/auth/me') ||
-          original.url.includes('/auth/refresh') ||
+        (original.url.includes('/auth/refresh') ||
           original.url.includes('/auth/logout') ||
           original.url.includes('/auth/google/exchange') ||
           original.url.includes('/auth/admin/login'));
